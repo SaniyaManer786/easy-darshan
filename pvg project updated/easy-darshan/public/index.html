@@ -1,0 +1,1241 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Easy Darshan – Smart Crowd Management</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700;900&family=Nunito:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"
+    />
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.2/dist/coco-ssd.min.js"></script>
+  </head>
+  <body>
+    <div id="loader">
+      <div
+        style="
+          font-family: 'Cinzel', serif;
+          font-size: 2rem;
+          color: var(--gold);
+          letter-spacing: 4px;
+        "
+      >
+        ॐ
+      </div>
+      <div class="mandala"></div>
+      <div
+        style="
+          color: var(--saffron);
+          font-family: 'Cinzel', serif;
+          letter-spacing: 2px;
+        "
+      >
+        EASY DARSHAN
+      </div>
+      <div style="color: var(--muted); font-size: 0.85rem">
+        <span data-i18n="loader_sub">Loading Smart Crowd System…</span>
+      </div>
+    </div>
+
+    <div
+      class="notification-bell"
+      id="notif-bell"
+      style="position: fixed; top: 16px; right: 70px; z-index: 110"
+    >
+      🔔<span class="notif-badge" id="notif-badge"></span>
+    </div>
+
+    <div id="notif-drawer">
+      <div
+        style="
+          padding: 16px 18px;
+          border-bottom: 1px solid var(--border);
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+        "
+      >
+        <span style="font-family: 'Cinzel', serif; color: var(--gold)" data-i18n="notif_title"
+          >Notifications</span
+        >
+        <span
+          style="cursor: pointer; color: var(--muted); font-size: 0.8rem"
+          id="clear-notifs"
+          data-i18n="notif_clear"
+          >Clear all</span
+        >
+      </div>
+      <div id="notif-list"></div>
+    </div>
+
+    <button class="sos-btn" onclick="triggerSOS()" title="SOS Alert" data-i18n-title="sos_title">SOS</button>
+    <div id="toast"></div>
+
+    <nav>
+      <div class="nav-inner">
+        <div class="brand" onclick="showPage('home')">
+          🛕 <span>Easy</span>Darshan
+        </div>
+        <div class="nav-links">
+          <button class="nav-btn active" onclick="showPage('home')" data-i18n="nav_home">Home</button>
+          <button class="nav-btn" onclick="showPage('auth')" data-i18n="nav_signin">Sign In</button>
+          <button class="nav-btn" onclick="goUserPage('booking')" data-i18n="nav_booking">
+            Slot Booking
+          </button>
+          <button class="nav-btn" onclick="showPage('heatmap')" data-i18n="nav_heatmap">Heatmap</button>
+          <button class="nav-btn" onclick="showPage('chatbot')" data-i18n="nav_chatbot">Chatbot</button>
+          <button class="nav-btn" onclick="showPage('manual')" data-i18n="nav_manual">User Manual</button>
+          <button class="nav-btn" onclick="goUserPage('monitor')" data-i18n="nav_monitor">Monitoring</button>
+          <button
+            type="button"
+            class="nav-btn nav-btn-ghost"
+            id="nav-user-logout"
+            style="display: none"
+            onclick="doUserLogout()"
+            data-i18n="nav_signout"
+          >
+            Sign out
+          </button>
+          <button class="nav-btn" id="nav-admin-btn" onclick="openAdminGate()" data-i18n="nav_admin">
+            Admin
+          </button>
+        </div>
+        <select class="lang-sel" onchange="setLang(this.value)">
+          <option value="en">🌐 English</option>
+          <option value="hi">हिंदी</option>
+          <option value="mr">मराठी</option>
+        </select>
+      </div>
+    </nav>
+
+    <div
+      id="darshan-session-bar"
+      class="darshan-session-bar"
+      style="display: none"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="darshan-session-inner">
+        <div class="darshan-session-row">
+          <span class="darshan-session-label" data-i18n="darshan_label">Darshan session</span>
+          <span id="darshan-session-countdown" class="darshan-session-countdown"
+            >2:00</span
+          >
+        </div>
+        <div class="darshan-session-progress-track">
+          <div id="darshan-session-progress" class="darshan-session-progress"></div>
+        </div>
+        <p id="darshan-session-hint" class="darshan-session-hint" data-i18n="darshan_hint">
+          Staff scanned your entry. Complete exit scan at the gate before the timer ends to avoid
+          a ₹100 penalty.
+        </p>
+      </div>
+    </div>
+
+    <div id="page-home" class="page active">
+      <div class="hero">
+        <div class="hero-om">ॐ</div>
+        <div style="margin-bottom: 16px">
+          <span
+            class="chip"
+            style="
+              background: rgba(255, 107, 0, 0.15);
+              color: var(--saffron);
+              letter-spacing: 1px;
+              font-size: 0.75rem;
+            "
+            data-i18n="hero_live">● SYSTEM LIVE</span>
+        </div>
+        <h1 id="hero-title">
+          EASY DARSHAN<br /><span style="color: var(--saffron)"
+            >Smart Crowd</span
+          >
+          Management
+        </h1>
+        <p id="hero-desc">
+          AI-powered crowd control, QR slot booking, and real-time monitoring
+          for a safe and seamless darshan experience.
+        </p>
+        <div class="flex gap-2 flex-wrap" style="justify-content: center">
+          <button class="btn btn-primary" onclick="goUserPage('booking')">
+            📅 Book Your Slot
+          </button>
+          <button class="btn btn-outline" onclick="showPage('heatmap')">
+            📊 View Live Crowd
+          </button>
+        </div>
+        <div class="hero-stats">
+          <div class="stat">
+            <div class="stat-num" id="stat-visitors">1,247</div>
+            <div class="stat-lbl">Today's Visitors</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-inside">342</div>
+            <div class="stat-lbl">Inside Now</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-wait">~18 min</div>
+            <div class="stat-lbl">Avg Wait Time</div>
+          </div>
+          <div class="stat">
+            <div class="stat-num" id="stat-slots">8</div>
+            <div class="stat-lbl">Open Slots</div>
+          </div>
+        </div>
+      </div>
+      <div class="page-content" style="padding-top: 0">
+        <div class="grid-3">
+          <div
+            class="card fade-in"
+            style="cursor: pointer"
+            onclick="goUserPage('booking')"
+          >
+            <div class="feature-icon icon-saffron">📅</div>
+            <h3 style="color: var(--gold); margin-bottom: 8px">Slot Booking</h3>
+            <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.6">
+              Book 2-hour darshan slots for up to 4 family members. Get instant
+              QR code confirmation.
+            </p>
+          </div>
+          <div
+            class="card fade-in"
+            style="cursor: pointer"
+            onclick="showPage('heatmap')"
+          >
+            <div class="feature-icon icon-gold">🗺️</div>
+            <h3 style="color: var(--gold); margin-bottom: 8px">Live Heatmap</h3>
+            <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.6">
+              Real-time crowd density visualization. Plan your visit to avoid
+              peak hours.
+            </p>
+          </div>
+          <div
+            class="card fade-in"
+            style="cursor: pointer"
+            onclick="goUserPage('monitor')"
+          >
+            <div class="feature-icon icon-green">🎥</div>
+            <h3 style="color: var(--gold); margin-bottom: 8px">AI Monitoring</h3>
+            <p style="color: var(--muted); font-size: 0.9rem; line-height: 1.6">
+              In-browser detection alerts staff when zones become overcrowded.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-auth" class="page">
+      <div class="page-content" style="max-width: 480px">
+        <div class="card">
+          <div style="text-align: center; margin-bottom: 24px">
+            <div style="font-size: 2.5rem; margin-bottom: 8px">🛕</div>
+            <h2 class="page-title" id="auth-title">Welcome Back</h2>
+          </div>
+          <div class="tabs">
+            <div class="tab active" id="tab-login" onclick="switchAuth('login')">
+              Login
+            </div>
+            <div class="tab" id="tab-signup" onclick="switchAuth('signup')">
+              Sign Up
+            </div>
+          </div>
+          <div id="login-form">
+            <div class="form-group">
+              <label>USERNAME</label>
+              <input type="text" id="login-user" placeholder="Enter username" />
+            </div>
+            <div class="form-group">
+              <label>PASSWORD</label>
+              <input
+                type="password"
+                id="login-pass"
+                placeholder="••••••••"
+              />
+            </div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-bottom: 20px;
+              "
+            >
+              <label
+                style="
+                  display: flex;
+                  align-items: center;
+                  gap: 6px;
+                  font-size: 0.85rem;
+                  cursor: pointer;
+                "
+              >
+                <input type="checkbox" style="accent-color: var(--saffron)" />
+                Remember me
+              </label>
+              <span class="form-link">Forgot Password?</span>
+            </div>
+            <button
+              class="btn btn-primary w-full"
+              onclick="doLogin()"
+              style="justify-content: center"
+            >
+              Login
+            </button>
+            <div
+              style="
+                text-align: center;
+                margin-top: 16px;
+                font-size: 0.85rem;
+                color: var(--muted);
+              "
+            >
+              New here?
+              <span class="form-link" onclick="switchAuth('signup')"
+                >Create Account</span
+              >
+            </div>
+          </div>
+          <div id="signup-form" style="display: none">
+            <div class="form-group">
+              <label>FULL NAME</label>
+              <input type="text" id="sig-name" placeholder="Ramesh Sharma" />
+            </div>
+            <div class="form-group">
+              <label>EMAIL</label>
+              <input type="email" id="sig-email" placeholder="you@example.com" />
+            </div>
+            <div class="form-group">
+              <label>CONTACT NUMBER</label>
+              <input type="tel" id="sig-phone" placeholder="+91 98765 43210" />
+            </div>
+            <div class="form-group">
+              <label>USERNAME</label>
+              <input type="text" id="sig-user" placeholder="Choose a username" />
+            </div>
+            <div class="form-group">
+              <label>PASSWORD</label>
+              <input type="password" id="sig-pass" placeholder="••••••••" />
+            </div>
+            <div class="form-group">
+              <label>CONFIRM PASSWORD</label>
+              <input type="password" id="sig-cpass" placeholder="••••••••" />
+            </div>
+            <button
+              class="btn btn-primary w-full"
+              onclick="doSignup()"
+              style="justify-content: center"
+            >
+              Create Account
+            </button>
+            <div
+              style="
+                text-align: center;
+                margin-top: 16px;
+                font-size: 0.85rem;
+                color: var(--muted);
+              "
+            >
+              Already have account?
+              <span class="form-link" onclick="switchAuth('login')">Login</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-booking" class="page">
+      <div class="page-content">
+        <h2 class="page-title">📅 Slot Booking</h2>
+        <p class="page-sub">
+          Book your 2-hour darshan slot. Each booking covers up to 4 family
+          members.
+        </p>
+        <div id="booking-form-section">
+          <div class="card mb-4">
+            <h3 style="color: var(--gold); margin-bottom: 16px">
+              Step 1 – Visit Details
+            </h3>
+            <div class="grid-2">
+              <div class="form-group">
+                <label>VISITOR NAME</label>
+                <input type="text" id="b-name" placeholder="Ramesh Sharma" />
+              </div>
+              <div class="form-group">
+                <label>NUMBER OF PEOPLE (Max 4)</label>
+                <select id="b-people">
+                  <option>1</option>
+                  <option>2</option>
+                  <option>3</option>
+                  <option selected>4</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>SELECT DATE</label>
+                <input type="text" id="b-date" placeholder="Pick a date" readonly />
+              </div>
+              <div class="form-group">
+                <label>CONTACT NUMBER</label>
+                <input type="tel" id="b-phone" placeholder="+91 98765 43210" />
+              </div>
+            </div>
+          </div>
+          <div class="card mb-4">
+            <h3 style="color: var(--gold); margin-bottom: 16px">
+              Step 2 – Select Time Slot (2 hours each)
+            </h3>
+            <div class="slots-grid" id="slots-container"></div>
+            <div
+              id="slot-full-msg"
+              style="display: none"
+              class="alert-box alert-danger"
+            >
+              🚫 Slot Full – Please select another available slot (2-hour
+              duration)
+            </div>
+          </div>
+          <div class="flex gap-4">
+            <button class="btn btn-primary" onclick="generateBooking()">
+              ✅ Confirm & Generate QR
+            </button>
+            <button class="btn btn-outline" onclick="resetBooking()">
+              ↩ Reset
+            </button>
+          </div>
+        </div>
+        <div id="qr-result-section" style="display: none" class="card">
+          <div class="qr-result">
+            <div style="color: var(--green); font-size: 2rem">✅</div>
+            <h3
+              style="
+                color: var(--gold);
+                font-family: 'Cinzel', serif;
+                margin: 8px 0;
+              "
+            >
+              Booking Confirmed!
+            </h3>
+            <p style="color: var(--muted); font-size: 0.9rem">
+              Show this QR code at the temple gate
+            </p>
+            <div id="qr-canvas"></div>
+            <div class="qr-info" id="qr-info-display"></div>
+            <div class="flex gap-2 mt-4" style="justify-content: center">
+              <button class="btn btn-primary btn-sm" onclick="downloadQR()">
+                ⬇ Download QR
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="resetBooking()">
+                📅 Book Another Slot
+              </button>
+            </div>
+          </div>
+          <div class="divider"></div>
+          <div class="alert-box alert-warning" style="text-align: left">
+            <strong>Entry &amp; exit</strong> are done only by gate staff on the admin
+            dashboard. Show this <strong>QR code</strong> at the gate; staff scan starts your
+            <strong>2-minute</strong> darshan window and records exit (late exit may incur ₹100).
+          </div>
+          <p style="color: var(--muted); font-size: 0.8rem; margin-top: 8px; text-align: center">
+            QR encodes your booking serial only — details are shown below for your reference.
+          </p>
+          <div
+            id="expected-darshan"
+            class="alert-box alert-success"
+            style="display: none; margin-top: 12px"
+          ></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-heatmap" class="page">
+      <div class="tzm-wrap page-content">
+        <div class="tzm-header-row">
+          <div>
+            <h2 class="page-title">TEMPLE ZONE MAP</h2>
+            <p class="page-sub" style="margin-bottom: 0">
+              Auto-refreshes every 10 seconds.
+            </p>
+          </div>
+          <div class="flex gap-2 items-center flex-wrap">
+            <span class="tzm-live"
+              ><span class="tzm-live-dot" aria-hidden="true"></span> Live</span
+            >
+            <button type="button" class="btn-tzm-refresh" onclick="refreshHeatmap()">
+              🔄 Refresh
+            </button>
+          </div>
+        </div>
+        <div class="tzm-grid" id="tzm-zone-grid"></div>
+        <div class="tzm-legend">
+          <span>🟢 Low (0–30)</span>
+          <span>🟠 Medium (31–60)</span>
+          <span>🔴 High (61+)</span>
+        </div>
+        <div class="tzm-summary-row">
+          <div class="tzm-summary-card">
+            <div class="tzm-summary-icon" aria-hidden="true">👥</div>
+            <div>
+              <div class="tzm-summary-val" id="tzm-total">0</div>
+              <div class="tzm-summary-lbl">Total People Inside</div>
+            </div>
+          </div>
+          <div class="tzm-summary-card">
+            <div class="tzm-summary-icon" aria-hidden="true">📊</div>
+            <div>
+              <div class="tzm-summary-val" id="tzm-avg-density">0%</div>
+              <div class="tzm-summary-lbl">Avg Density %</div>
+            </div>
+          </div>
+          <div class="tzm-summary-card">
+            <div class="tzm-summary-icon" aria-hidden="true">⚠️</div>
+            <div>
+              <div class="tzm-summary-val" id="tzm-high-alert">0</div>
+              <div class="tzm-summary-lbl">High-Alert Zones</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-chatbot" class="page">
+      <div class="page-content" style="padding-bottom: 0">
+        <h2 class="page-title">🤖 Darshan Assistant</h2>
+        <p class="page-sub">
+          Ask me anything about slot booking, QR codes, or temple rules!
+        </p>
+      </div>
+      <div class="chat-wrap" style="max-width: 900px; margin: 0 auto; padding: 0 20px">
+        <div class="chat-msgs" id="chat-msgs">
+          <div class="msg msg-bot">
+            🙏 Jai Shri Ram! I'm your Darshan Assistant. How can I help you
+            today? You can ask me about slot booking, QR codes, crowd levels,
+            penalties, and more!
+          </div>
+        </div>
+        <div class="chat-faq" id="faq-chips"></div>
+        <div class="chat-input-row">
+          <input
+            type="text"
+            id="chat-input"
+            placeholder="Type your question…"
+            onkeydown="if(event.key==='Enter')sendChat()"
+          />
+          <button class="chat-send" onclick="sendChat()">Send ➤</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-manual" class="page">
+      <div class="page-content">
+        <h2 class="page-title">📖 User Manual</h2>
+        <p class="page-sub">Everything you need to know for a smooth darshan experience</p>
+        <div class="grid-2">
+          <div>
+            <div class="card manual-section">
+              <h3>🕐 Temple Timings</h3>
+              <div class="timing-grid">
+                <div class="timing-card">
+                  <div class="timing-day">Mon – Fri</div>
+                  <div class="timing-time">6:00 AM – 9:00 PM</div>
+                </div>
+                <div class="timing-card">
+                  <div class="timing-day">Saturday</div>
+                  <div class="timing-time">5:00 AM – 10:00 PM</div>
+                </div>
+                <div class="timing-card">
+                  <div class="timing-day">Sunday</div>
+                  <div class="timing-time">5:00 AM – 10:00 PM</div>
+                </div>
+                <div class="timing-card">
+                  <div class="timing-day">Festivals</div>
+                  <div class="timing-time">4:00 AM – 12:00 AM</div>
+                </div>
+              </div>
+            </div>
+            <div class="card manual-section mt-4">
+              <h3>📅 Slot Booking Instructions</h3>
+              <ul>
+                <li>Each slot is 2 hours long with a 30-minute grace period</li>
+                <li>Maximum 4 people allowed per single QR code / booking</li>
+                <li>Select your preferred date and available time slot</li>
+                <li>Fill in visitor name, contact number and number of people</li>
+                <li>Click "Confirm & Generate QR" to get your QR code</li>
+                <li>Download or screenshot the QR for offline use</li>
+              </ul>
+            </div>
+            <div class="card manual-section mt-4">
+              <h3>📱 QR Code Usage</h3>
+              <ul>
+                <li>Show QR at the entry gate – scanner will verify your booking</li>
+                <li>One QR covers all people in your booking group</li>
+                <li>QR is valid from your slot start time until exit scan</li>
+                <li>QR cannot be reused once exit is scanned</li>
+                <li>Keep phone brightness high for smooth scanning</li>
+                <li>Battery backup (power bank) recommended</li>
+              </ul>
+            </div>
+          </div>
+          <div>
+            <div class="card manual-section">
+              <h3>⚠️ Rules & Penalties</h3>
+              <ul>
+                <li>Maximum stay: 2 hours + 30-minute grace period</li>
+                <li>
+                  Overstay beyond grace period:
+                  <strong style="color: var(--red)">₹100 penalty</strong>
+                  notification sent
+                </li>
+                <li>Mobile photography permitted only in designated zones</li>
+                <li>Maintain decorum and silence in sanctum area</li>
+                <li>No food or beverages inside the main temple hall</li>
+                <li>Footwear must be removed at designated areas</li>
+                <li>Dress code strictly followed – traditional attire preferred</li>
+              </ul>
+            </div>
+            <div class="card manual-section mt-4">
+              <h3>🗺️ Understanding the Heatmap</h3>
+              <p>The heatmap shows real-time crowd distribution across temple zones:</p>
+              <ul style="margin-top: 8px">
+                <li>
+                  <strong style="color: var(--green)">Green (Low)</strong>: Zone is
+                  comfortable, easy movement
+                </li>
+                <li>
+                  <strong style="color: var(--gold)">Yellow (Medium)</strong>:
+                  Moderate crowd, slight queuing expected
+                </li>
+                <li>
+                  <strong style="color: var(--red)">Red (High)</strong>: Overcrowded –
+                  staff will manage entry
+                </li>
+              </ul>
+              <p style="margin-top: 8px">
+                Data updates every 5 seconds from QR scan entries.
+              </p>
+            </div>
+            <div class="card manual-section mt-4">
+              <h3>🔔 Notification Guide</h3>
+              <ul>
+                <li><strong>Entry Confirmation</strong>: Sent after QR scan at gate</li>
+                <li><strong>Darshan Time</strong>: Real-time expected wait estimate</li>
+                <li><strong>10-min Warning</strong>: Alert before slot expires</li>
+                <li><strong>Exit Reminder</strong>: Prompt to scan exit QR</li>
+                <li><strong>Penalty Alert</strong>: If overstay detected</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-monitor" class="page">
+      <div class="page-content">
+        <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
+          <div>
+            <h2 class="page-title">🎥 AI Crowd Monitoring</h2>
+            <p class="page-sub" style="margin-bottom: 0">
+              COCO-SSD People Detection · Webcam-Based · Real-time Alerts
+            </p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-primary btn-sm" id="cam-start-btn" onclick="startCamera()">
+              📷 Start Camera
+            </button>
+            <button
+              class="btn btn-outline btn-sm"
+              id="cam-stop-btn"
+              onclick="stopCamera()"
+              style="display: none"
+            >
+              ⏹ Stop
+            </button>
+          </div>
+        </div>
+        <div class="monitor-wrap">
+          <div>
+            <div class="video-container">
+              <video id="webcam-video" autoplay muted playsinline></video>
+              <canvas id="detection-canvas"></canvas>
+              <div class="cam-overlay">
+                <span
+                  class="cam-badge cam-live pulse"
+                  id="live-indicator"
+                  style="display: none"
+                  >● LIVE</span
+                >
+                <span class="cam-badge cam-count" id="person-count-badge"
+                  >👤 0 detected</span
+                >
+              </div>
+              <div
+                id="cam-placeholder"
+                style="
+                  position: absolute;
+                  inset: 0;
+                  display: flex;
+                  flex-direction: column;
+                  align-items: center;
+                  justify-content: center;
+                  background: var(--navy);
+                "
+              >
+                <div style="font-size: 3rem; margin-bottom: 12px">📷</div>
+                <div style="color: var(--muted); font-size: 0.9rem">
+                  Click "Start Camera" to begin AI detection
+                </div>
+                <div style="color: var(--muted); font-size: 0.8rem; margin-top: 6px">
+                  Uses TF.js COCO-SSD model in-browser
+                </div>
+              </div>
+            </div>
+            <div class="card mt-4" id="model-status-card">
+              <div class="flex items-center gap-2">
+                <span id="model-icon">⏳</span>
+                <div>
+                  <div style="font-weight: 700; font-size: 0.9rem" id="model-status-text">
+                    Model not loaded
+                  </div>
+                  <div style="color: var(--muted); font-size: 0.8rem" id="model-status-sub">
+                    Click "Start Camera" to load the detection model
+                  </div>
+                </div>
+              </div>
+              <div class="progress mt-4" id="model-progress" style="display: none">
+                <div
+                  class="progress-fill"
+                  style="background: var(--saffron); width: 0%"
+                  id="model-progress-bar"
+                ></div>
+              </div>
+            </div>
+            <div class="card mt-4">
+              <h3 style="color: var(--gold); margin-bottom: 12px; font-size: 1rem">
+                📋 Detection Log
+              </h3>
+              <div
+                id="detection-log"
+                style="max-height: 160px; overflow-y: auto; font-size: 0.82rem; color: var(--muted)"
+              >
+                <div style="text-align: center; padding: 20px">
+                  Awaiting camera feed…
+                </div>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div id="alert-panel">
+              <div class="alert-box alert-success">✅ All zones operating normally</div>
+            </div>
+            <div class="card mb-4">
+              <h3 style="color: var(--gold); margin-bottom: 12px; font-size: 0.95rem">
+                ⚙️ Alert Configuration
+              </h3>
+              <div class="form-group" style="margin-bottom: 10px">
+                <label>OVERCROWD THRESHOLD (people)</label>
+                <input
+                  type="number"
+                  id="crowd-threshold"
+                  value="3"
+                  min="1"
+                  max="20"
+                  style="width: 100%"
+                />
+              </div>
+              <div class="form-group" style="margin-bottom: 0">
+                <label>CURRENT ZONE</label>
+                <select id="zone-select">
+                  <option>Main Sanctum</option>
+                  <option>Entry Gate</option>
+                  <option>Prasad Queue</option>
+                  <option>Circumambulation Path</option>
+                </select>
+              </div>
+            </div>
+            <div class="card mb-4">
+              <h3 style="color: var(--gold); margin-bottom: 12px; font-size: 0.95rem">
+                🏛️ Zone Status
+              </h3>
+              <div class="zone-list" id="zone-monitor-list"></div>
+            </div>
+            <div class="card" style="border-color: var(--red)">
+              <h3 style="color: var(--red); margin-bottom: 12px; font-size: 0.95rem">
+                🚨 Staff Alert
+              </h3>
+              <p style="font-size: 0.82rem; color: var(--muted); margin-bottom: 12px">
+                Automatic SMS alerts sent to staff when crowd exceeds threshold.
+              </p>
+              <div id="sms-log" style="font-size: 0.8rem; max-height: 120px; overflow-y: auto">
+                <div style="color: var(--muted)">No alerts sent yet</div>
+              </div>
+              <button
+                class="btn btn-sm w-full mt-4"
+                style="
+                  background: rgba(255, 71, 87, 0.15);
+                  border: 1px solid var(--red);
+                  color: var(--red);
+                "
+                onclick="triggerSOS()"
+              >
+                📱 Send Manual SOS Alert
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-admin-login" class="page">
+      <div class="page-content" style="max-width: 440px">
+        <div class="card">
+          <div style="text-align: center; margin-bottom: 20px">
+            <div style="font-size: 2rem">🔐</div>
+            <h2 class="page-title" style="margin-bottom: 6px">Admin Sign In</h2>
+            <p class="page-sub" style="margin-bottom: 0">
+              Staff only. Visitor accounts cannot open this dashboard.
+            </p>
+          </div>
+          <div class="form-group">
+            <label>ADMIN USERNAME</label>
+            <input type="text" id="admin-login-user" placeholder="admin" autocomplete="username" />
+          </div>
+          <div class="form-group">
+            <label>PASSWORD</label>
+            <input
+              type="password"
+              id="admin-login-pass"
+              placeholder="••••••••"
+              autocomplete="current-password"
+              onkeydown="if(event.key==='Enter')doAdminLogin()"
+            />
+          </div>
+          <button type="button" class="btn btn-primary w-full" onclick="doAdminLogin()">
+            Access dashboard
+          </button>
+          <button
+            type="button"
+            class="btn btn-outline w-full mt-4"
+            onclick="showPage('home')"
+          >
+            Back to home
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="page-admin" class="page">
+      <div class="page-content">
+        <h2 class="page-title">🔐 Admin Dashboard</h2>
+        <p class="page-sub">Manage slots, monitor crowd, and coordinate staff</p>
+        <div class="admin-grid">
+          <div class="admin-sidebar">
+            <div
+              class="admin-menu-item active"
+              onclick="showAdminPanel('overview', this)"
+            >
+              📊 Overview
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('bookings', this)">
+              📅 Bookings
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('walkin', this)">
+              🚶 Walk-in Booking
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('qrscan', this)">
+              📷 QR Scan (Entry / Exit)
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('staff', this)">
+              👷 Staff Management
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('analytics', this)">
+              📈 Analytics
+            </div>
+            <div class="admin-menu-item" onclick="showAdminPanel('settings', this)">
+              ⚙️ Settings
+            </div>
+            <button
+              type="button"
+              class="btn btn-outline btn-sm w-full mt-4"
+              style="justify-content: center"
+              onclick="doAdminLogout()"
+            >
+              Logout admin
+            </button>
+          </div>
+          <div>
+            <div class="admin-panel active" id="panel-overview">
+              <div class="grid-3 mb-4">
+                <div class="card" style="text-align: center">
+                  <div class="cstat-num" id="adm-inside">342</div>
+                  <div class="cstat-lbl">Inside Now (demo)</div>
+                  <div class="progress mt-4">
+                    <div
+                      class="progress-fill"
+                      id="adm-cap-bar"
+                      style="background: var(--saffron); width: 34%"
+                    ></div>
+                  </div>
+                </div>
+                <div class="card" style="text-align: center">
+                  <div class="cstat-num" id="adm-bookings-today">0</div>
+                  <div class="cstat-lbl">Today's Bookings</div>
+                  <div style="color: var(--green); font-size: 0.8rem; margin-top: 4px">
+                    From database
+                  </div>
+                </div>
+                <div class="card" style="text-align: center">
+                  <div class="cstat-num" id="adm-open-slots">8</div>
+                  <div class="cstat-lbl">Open Slots Today</div>
+                  <div style="color: var(--muted); font-size: 0.8rem; margin-top: 4px">
+                    Capacity-aware
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 16px">
+                  Today's Slot Summary
+                </h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>Slot</th>
+                      <th>Capacity</th>
+                      <th>Booked</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-slot-table"></tbody>
+                </table>
+              </div>
+              <div class="card mt-4">
+                <h3 style="color: var(--gold); margin-bottom: 12px">QR session snapshot</h3>
+                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 12px">
+                  Live counts (refreshed when you open Admin). Full lists under
+                  <strong>QR Scan</strong>.
+                </p>
+                <div class="flex gap-4 flex-wrap">
+                  <div>
+                    <span class="text-green" style="font-weight: 700" id="adm-qr-active">0</span>
+                    <span class="text-muted" style="font-size: 0.85rem"> active (inside 2 min)</span>
+                  </div>
+                  <div>
+                    <span class="text-gold" style="font-weight: 700" id="adm-qr-expired">0</span>
+                    <span class="text-muted" style="font-size: 0.85rem"> expired (no exit yet)</span>
+                  </div>
+                  <div>
+                    <span class="text-red" style="font-weight: 700" id="adm-qr-overstayed">0</span>
+                    <span class="text-muted" style="font-size: 0.85rem"> overstayed (₹100)</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-bookings">
+              <div class="card">
+                <div class="flex justify-between items-center mb-4">
+                  <h3 style="color: var(--gold)">All Bookings</h3>
+                  <input
+                    type="text"
+                    id="admin-booking-search"
+                    placeholder="Search by name…"
+                    style="
+                      background: var(--deep);
+                      border: 1px solid var(--border);
+                      color: var(--text);
+                      padding: 8px 14px;
+                      border-radius: 8px;
+                      font-family: 'Nunito', sans-serif;
+                      outline: none;
+                      width: 200px;
+                    "
+                    oninput="filterAdminBookings(this.value)"
+                  />
+                </div>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Name</th>
+                      <th>Slot</th>
+                      <th>People</th>
+                      <th>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="admin-bookings-table"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-walkin">
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 20px">
+                  Walk-in Booking (Admin)
+                </h3>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label>VISITOR NAME</label>
+                    <input type="text" id="wi-name" placeholder="Walk-in visitor" />
+                  </div>
+                  <div class="form-group">
+                    <label>CONTACT</label>
+                    <input type="tel" id="wi-phone" placeholder="+91 …" />
+                  </div>
+                  <div class="form-group">
+                    <label>PEOPLE</label>
+                    <select id="wi-people">
+                      <option>1</option>
+                      <option>2</option>
+                      <option>3</option>
+                      <option>4</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label>SLOT</label>
+                    <select id="wi-slot">
+                      <option>6:00–8:00 AM</option>
+                      <option>8:00–10:00 AM</option>
+                      <option>10:00 AM–12:00 PM</option>
+                      <option>12:00–2:00 PM</option>
+                      <option>2:00–4:00 PM</option>
+                      <option>4:00–6:00 PM</option>
+                      <option>6:00–8:00 PM</option>
+                      <option>8:00–10:00 PM</option>
+                    </select>
+                  </div>
+                </div>
+                <button class="btn btn-primary" onclick="adminWalkIn()">
+                  Generate Walk-in QR
+                </button>
+                <div id="walkin-qr" style="margin-top: 20px; text-align: center"></div>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-qrscan">
+              <div class="card mb-4">
+                <h3 style="color: var(--gold); margin-bottom: 12px" data-i18n="qr_gate_title">📷 Gate: camera QR scan</h3>
+                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 16px" data-i18n="qr_gate_p">
+                  Point the camera at the visitor’s booking QR. Choose <strong>Entry</strong> or
+                  <strong>Exit</strong> mode — a successful scan records the visit and updates
+                  people counts. Entry starts a <strong>2-minute</strong> session; late exit may
+                  incur ₹100.
+                </p>
+                <div class="admin-qr-mode-row flex gap-3 flex-wrap items-center mb-3">
+                  <span style="color: var(--muted); font-size: 0.8rem" data-i18n="qr_mode">Mode:</span>
+                  <label class="admin-qr-mode-opt"
+                    ><input type="radio" name="admin-scan-mode" value="entry" checked /> <span data-i18n="qr_entry">Entry (in)</span></label
+                  >
+                  <label class="admin-qr-mode-opt"
+                    ><input type="radio" name="admin-scan-mode" value="exit" /> <span data-i18n="qr_exit">Exit (out)</span></label
+                  >
+                </div>
+                <div id="admin-qr-reader" class="admin-qr-reader"></div>
+                <div class="form-group mt-3" style="max-width: 480px">
+                  <label data-i18n="qr_manual">Manual serial code</label>
+                  <div class="flex gap-2">
+                    <input type="text" id="admin-qr-serial" placeholder="e.g. ED123456" />
+                    <button type="button" class="btn btn-primary btn-sm" onclick="adminScanEntry()" data-i18n="qr_scan_btn">Record Entry</button>
+                    <button type="button" class="btn btn-outline btn-sm" onclick="adminScanExit()" data-i18n="qr_exit">Record Exit</button>
+                  </div>
+                </div>
+                <div class="flex gap-2 flex-wrap mt-3">
+                  <button type="button" class="btn btn-outline btn-sm" onclick="refreshQrAdminFull()" data-i18n="qr_refresh">
+                    🔄 Refresh lists & SMS log
+                  </button>
+                </div>
+                <div id="admin-qr-scan-status" style="margin-top: 12px; font-size: 0.88rem"></div>
+              </div>
+              <div class="grid-2 mb-4">
+                <div class="card">
+                  <h4 style="color: var(--green); margin-bottom: 8px; font-size: 0.95rem" data-i18n="qr_active">
+                    ● Active (within 2 min)
+                  </h4>
+                  <div id="qr-list-active" style="font-size: 0.82rem; color: var(--muted)"></div>
+                </div>
+                <div class="card">
+                  <h4 style="color: var(--gold); margin-bottom: 8px; font-size: 0.95rem" data-i18n="qr_expired">
+                    ◆ Expired (QR invalid, exit pending)
+                  </h4>
+                  <div id="qr-list-expired" style="font-size: 0.82rem; color: var(--muted)"></div>
+                </div>
+              </div>
+              <div class="card mb-4">
+                <h4 style="color: var(--red); margin-bottom: 8px; font-size: 0.95rem" data-i18n="qr_over">
+                  ₹ Overstayed (penalty recorded)
+                </h4>
+                <div id="qr-list-overstayed" style="font-size: 0.82rem; color: var(--muted)"></div>
+              </div>
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 8px; font-size: 1rem" data-i18n="sms_log_title">
+                  📱 SMS log
+                </h3>
+                <p style="color: var(--muted); font-size: 0.8rem; margin-bottom: 8px" data-i18n="sms_log_p">
+                  Same messages are printed in the <strong>server console</strong>.
+                </p>
+                <div class="sms-log-box" id="admin-sms-mock-log"></div>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-staff">
+              <div class="card mb-4">
+                <div class="flex justify-between items-center mb-3 flex-wrap gap-2">
+                  <h3 style="color: var(--gold); margin-bottom: 0" data-i18n="staff_add">Add Staff Member</h3>
+                  <button type="button" class="btn btn-outline btn-sm" onclick="sendTestStaffSms()">📱 Send Test SMS to Staff</button>
+                </div>
+                <div class="grid-2">
+                  <div class="form-group">
+                    <label data-i18n="th_name">NAME</label>
+                    <input type="text" id="st-name" placeholder="Staff name" />
+                  </div>
+                  <div class="form-group">
+                    <label data-i18n="th_pos">POSITION</label>
+                    <select id="st-pos">
+                      <option>Gate Security</option>
+                      <option>Queue Manager</option>
+                      <option>Zone Monitor</option>
+                      <option>Supervisor</option>
+                    </select>
+                  </div>
+                  <div class="form-group">
+                    <label data-i18n="th_phone">PHONE NUMBER</label>
+                    <input type="tel" id="st-phone" placeholder="+91 …" />
+                  </div>
+                  <div class="form-group" style="display: flex; align-items: flex-end">
+                    <button class="btn btn-primary btn-sm" onclick="addStaff()" data-i18n="btn_add_staff">
+                      Add Staff
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 16px" data-i18n="staff_dir">Staff Directory</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="th_name">Name</th>
+                      <th data-i18n="th_pos">Position</th>
+                      <th data-i18n="th_phone">Phone</th>
+                      <th data-i18n="th_status">Status</th>
+                      <th data-i18n="th_action">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="staff-table"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-analytics">
+              <div class="grid-4 mb-4">
+                <div class="card" style="text-align: center; padding: 16px;">
+                  <div class="cstat-num text-saffron" id="an-stat-in">0</div>
+                  <div class="cstat-lbl" data-i18n="an_total_in">Total Entries</div>
+                </div>
+                <div class="card" style="text-align: center; padding: 16px;">
+                  <div class="cstat-num text-blue" id="an-stat-out">0</div>
+                  <div class="cstat-lbl" data-i18n="an_total_out">Total Exits</div>
+                </div>
+                <div class="card" style="text-align: center; padding: 16px;">
+                  <div class="cstat-num text-green" id="an-stat-inside">0</div>
+                  <div class="cstat-lbl" data-i18n="an_inside">Net Inside</div>
+                </div>
+                <div class="card" style="text-align: center; padding: 16px;">
+                  <div class="cstat-num text-gold" style="font-size: 1.1rem; line-height: 1.8;" id="an-stat-peak">—</div>
+                  <div class="cstat-lbl" data-i18n="an_peak">Peak Slot</div>
+                </div>
+              </div>
+
+              <div class="analytics-admin-grid mb-4">
+                <div class="card analytics-chart-card">
+                  <div class="flex justify-between items-center flex-wrap gap-2 mb-4">
+                    <h3 style="color: var(--gold); margin-bottom: 0" data-i18n="an_title">
+                      Visitor flow by time slot
+                    </h3>
+                    <div class="form-group" style="margin-bottom: 0; min-width: 160px">
+                      <label style="font-size: 0.75rem" data-i18n="an_date">DATE (ENTRY / EXIT)</label>
+                      <input type="date" id="admin-analytics-date" />
+                    </div>
+                  </div>
+                  <p style="color: var(--muted); font-size: 0.8rem; margin-bottom: 12px" data-i18n="an_help">
+                    Bar height = people (QR entry scan / QR exit scan) per booking slot. Orange =
+                    entries · Blue = exits.
+                  </p>
+                  <div class="analytics-chart-wrap">
+                    <div id="analytics-bars" class="analytics-bars"></div>
+                    <div id="analytics-labels" class="analytics-labels"></div>
+                  </div>
+                </div>
+                <div class="card analytics-metrics-card">
+                  <h3 style="color: var(--gold); margin-bottom: 16px" data-i18n="an_kpi">Key Metrics</h3>
+                  <div id="analytics-metrics" class="analytics-metrics-list"></div>
+                </div>
+              </div>
+
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 16px">📊 Detailed Slot Breakdown Table</h3>
+                <table class="data-table">
+                  <thead>
+                    <tr>
+                      <th data-i18n="an_col_slot">Slot</th>
+                      <th data-i18n="an_legend_in">Entries</th>
+                      <th data-i18n="an_legend_out">Exits</th>
+                      <th data-i18n="an_col_net">Net Inside</th>
+                      <th data-i18n="th_status">Capacity Occupancy</th>
+                    </tr>
+                  </thead>
+                  <tbody id="analytics-breakdown-table"></tbody>
+                </table>
+              </div>
+            </div>
+            <div class="admin-panel" id="panel-settings">
+              <div class="card">
+                <h3 style="color: var(--gold); margin-bottom: 20px" data-i18n="set_title">System Settings</h3>
+                <p style="color: var(--muted); font-size: 0.85rem; margin-bottom: 16px" data-i18n="set_p">
+                  Demo UI — wire to API later. Booking rules are enforced on the server when
+                  you confirm a slot.
+                </p>
+                <div class="form-group">
+                  <label data-i18n="set_dur">SLOT DURATION (hours)</label>
+                  <input type="number" value="2" min="1" max="4" />
+                </div>
+                <div class="form-group">
+                  <label data-i18n="set_cap">MAX CAPACITY PER SLOT</label>
+                  <input type="number" value="100" />
+                </div>
+                <div class="form-group">
+                  <label data-i18n="set_maxp">MAX PEOPLE PER BOOKING</label>
+                  <input type="number" value="4" max="10" />
+                </div>
+                <div class="form-group">
+                  <label data-i18n="set_grace">GRACE PERIOD (minutes)</label>
+                  <input type="number" value="30" />
+                </div>
+                <div class="form-group">
+                  <label data-i18n="set_pen">PENALTY AMOUNT (₹)</label>
+                  <input type="number" value="100" />
+                </div>
+                <button class="btn btn-primary btn-sm" type="button" onclick="showToast('Settings saved!')" data-i18n="btn_save">
+                  💾 Save Settings
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="penalty-modal" class="modal-overlay" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <h3 id="penalty-modal-title" data-i18n="penalty_title">Penalty notice</h3>
+        <p id="penalty-modal-text"></p>
+        <div class="modal-actions">
+          <button type="button" class="btn btn-primary btn-sm" onclick="closePenaltyModal()" data-i18n="penalty_ok">
+            OK
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="/i18n.js"></script>
+    <script src="/app.js"></script>
+  </body>
+</html>

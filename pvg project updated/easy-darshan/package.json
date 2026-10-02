@@ -1,0 +1,21 @@
+{
+  "name": "easy-darshan",
+  "version": "1.0.0",
+  "description": "Easy Darshan – Smart Temple Management (full stack)",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "nodemon server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "bcryptjs": "^2.4.3",
+    "express": "^4.21.0",
+    "express-session": "^1.18.0"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.0"
+  }
+}
